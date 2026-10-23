@@ -33,7 +33,8 @@ def operators_dag():
         task_id="pod_task",
         name="pod-task",
         namespace="airflow-tasks",
-        image="python:3.13-alpine",
+        # @task.kubernetes wraps the script in `bash -cx`, so the image needs bash (alpine has none).
+        image="python:3.13-slim",
         env_vars={"GREETING": "hi from Airflow"},
         # Downward API: tell the container which node it landed on.
         pod_runtime_info_envs=[
