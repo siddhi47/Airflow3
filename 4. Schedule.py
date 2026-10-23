@@ -4,7 +4,7 @@ from pendulum import datetime
 @dag(
         dag_id="first_schedule_dag",
         start_date= datetime(year=2026, month=1, day=1, tz="America/Halifax"),
-        schedule="@daily",
+        schedule="@weekly",
         is_paused_upon_creation=False,
         catchup=True
 )
