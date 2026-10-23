@@ -1,6 +1,5 @@
 from airflow.sdk import dag, task 
 from airflow.operators.bash import BashOperator
-from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from kubernetes.client import models as k8s
 
 @dag(
@@ -29,17 +28,12 @@ def operators_dag():
     # The Airflow task pod launches this pod, streams its output into the
     # task log, and succeeds or fails on the container's exit code.
     # Uses the kubernetes_default connection (in-cluster, airflow-tasks).
-    pod_task = KubernetesPodOperator(
+
+    @task.kubernetes(
         task_id="pod_task",
         name="pod-task",
         namespace="airflow-tasks",
         image="python:3.13-alpine",
-        cmds=["python", "-c"],
-        arguments=[
-            "import os, platform, socket; "
-            "print('Hello from', socket.gethostname(), 'on node', os.environ['NODE_NAME']); "
-            "print('Python', platform.python_version(), '| greeting:', os.environ['GREETING'])"
-        ],
         env_vars={"GREETING": "hi from Airflow"},
         # Downward API: tell the container which node it landed on.
         pod_runtime_info_envs=[
@@ -58,6 +52,10 @@ def operators_dag():
         get_logs=True,
         on_finish_action="delete_pod",
     )
+    def pod_task():
+        import os, platform, socket
+        print("Hello from", socket.gethostname(), "on node", os.environ["NODE_NAME"])
+        print("Python", platform.python_version(), "| greeting:", os.environ["GREETING"])
 
     
     
@@ -65,9 +63,10 @@ def operators_dag():
     first = first_task()
     second = second_task()
     bash_modern = bash_task_modern()
-    bash_oldschool = bash_task_oldschool   
-    
-    first >> second >> bash_modern >> bash_oldschool >> pod_task
+    bash_oldschool = bash_task_oldschool
+    pod = pod_task()
+
+    first >> second >> bash_modern >> bash_oldschool >> pod
 
 # Instantiating the DAG
 operators_dag()
